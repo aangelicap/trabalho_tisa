@@ -8,6 +8,7 @@
 
 const int S = 4184, P = 1000, B = 4;
 const float R= 0.001;
+float Ni;
 
 struct boiler_info info;
 
@@ -20,7 +21,7 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 void updateBoilerInfo(void) {
     while (1) {
         pthread_mutex_lock(&mutex);
-            getBoilerInfo(&info);
+        getBoilerInfo(&info);
         pthread_mutex_unlock(&mutex);
 
 
@@ -54,42 +55,44 @@ void updateFile(void) {
     fclose(file);
 }
 
-// void * controle_p1(void * arg) { 
-//     double P, integ, No, Ni, N, waterLevel, erro, H, HRef;
-//     double long Ki = 3000000;
-//     double long Kp = 1000000;
-//     double Href = 1.45; 
+void * controle_p1(void * arg) { 
+    double P, I, No, Ni, N, erro, erro, H;
+    double long Ki = 1159000;
+    double long Kp = 5883000;
+    double Href = 1.45; 
 
-//    while(1){
-//       pthread_mutex_lock(&mutex);
-//         erro = Href - H; 
-//         P = Kp * erro; 
-//         integ = integ + (erro * Ki);
-//         N = P + integ; 
-//         Ni = N + No;
-//         setBoilerControl(WATER_IN_FLOW, Ni);
-//       pthread_mutex_unlock(&mutex);
-//    }
-// }
+    while(1){
+       pthread_mutex_lock(&mutex);
+       H = info.waterLevel;
+       No = info.waterOutFlow;
+	    
+	   erro = Href - H; 
+           P = Kp * erro; 
+           I = I + (erro * Ki);
+           N = P + I; 
+           Ni = N + No;
+          setBoilerControl(WATER_IN_FLOW, Ni);
+          pthread_mutex_unlock(&mutex);
+    }
+ }
 
 void * controle_p2(void * arg) {
-    double P, integ = 0, Ni = 1, H, erro, Tref = 30;
+    double P, I = 0, erro, Tref = 30;
     double Qi, Q, Qe, Qt; 
-    const double Ki = 30000;
-    const double Kp = 10000;
+    const int Kp = 500000000;
+    const int Ki = 875000000;
     double Ta, T, Ti;
 
     while(1){
-    pthread_mutex_lock(&mutex);
-        H = info.waterLevel;
+     pthread_mutex_lock(&mutex);
         Ta = info.airTemp;
         T = info.waterTemp;
         Ti = info.waterInTemp;
 
         erro = Tref - T;
         P = Kp * erro; 
-        integ = integ + (erro * Ki);
-        Qt = P + integ;
+        I = I + (erro * Ki);
+        Qt = P + I;
         Qi = Ni * S * (Ti - T);
         Qe = (T - Ta) / R;
         Q = Qt + Qe - Qi;
